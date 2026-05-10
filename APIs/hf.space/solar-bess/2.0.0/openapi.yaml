@@ -1,0 +1,174 @@
+openapi: "3.0.0"
+info:
+  title: Solar + BESS Sizing & Dispatch Optimization API
+  version: "2.0.0"
+  description: |
+    Commercial and industrial battery storage sizing in a single API call.
+    Provide peak demand, location, and electricity rate. Receive an optimally
+    sized BESS with CAPEX (low/mid/high scenarios), LCOS, NPV, IRR, and ITC
+    up to 50% via IRA 2022 Section 48E adder stacking. Every figure cited to
+    NREL, PNNL, or IRS sources. No black boxes. Hardware agnostic.
+  contact:
+    name: Tinashe Nedi
+    email: support@solartruth.app
+    url: https://rapidapi.com/user/bethelnedi
+  x-apisguru-categories:
+    - energy
+  x-logo:
+    url: https://solartruth.app/logo.png
+externalDocs:
+  url: https://amfumu-solar-bess-api.hf.space/docs
+servers:
+  - url: https://amfumu-solar-bess-api.hf.space
+paths:
+  /health:
+    get:
+      summary: Health check and full methodology register
+      operationId: getHealth
+      responses:
+        "200":
+          description: API status and methodology citations
+  /pricing:
+    get:
+      summary: Plan details and rate limits
+      operationId: getPricing
+      responses:
+        "200":
+          description: Pricing plans
+  /bess/quick:
+    post:
+      summary: Quick BESS sizing — Free plan
+      operationId: bessQuick
+      description: >
+        Returns sizing, mid-scenario ATB CAPEX, ITC at 30%, annual savings,
+        LCOS, and payback. No API key required.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - peak_demand_kw
+                - state
+                - flat_rate_usd_kwh
+              properties:
+                peak_demand_kw:
+                  type: number
+                  description: Site peak demand in kW
+                state:
+                  type: string
+                  description: US state code e.g. CA NY TX
+                flat_rate_usd_kwh:
+                  type: number
+                  description: Electricity rate in USD per kWh
+                chemistry_type:
+                  type: string
+                  enum: [lfp, nmc, lfp_long]
+                  default: lfp
+                shave_target_pct:
+                  type: number
+                  description: Demand shave target 0.05 to 0.50
+                discharge_hours:
+                  type: number
+                  description: Discharge duration 1.0 to 8.0 hours
+                load_factor:
+                  type: number
+                  description: Load factor 0.1 to 1.0
+      responses:
+        "200":
+          description: BESS sizing result with CAPEX, LCOS, ITC, savings, payback
+        "422":
+          description: Validation error
+  /bess/optimal:
+    post:
+      summary: Full financial model — Pro plan
+      operationId: bessOptimal
+      description: >
+        All 3 ATB CAPEX scenarios, NPV, IRR, ITC adder stacking up to 50%.
+        Requires API key.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - peak_demand_kw
+                - state
+                - flat_rate_usd_kwh
+              properties:
+                peak_demand_kw:
+                  type: number
+                state:
+                  type: string
+                flat_rate_usd_kwh:
+                  type: number
+                annual_kwh_consumption:
+                  type: number
+                chemistry_type:
+                  type: string
+                  enum: [lfp, nmc, lfp_long]
+                shave_target_pct:
+                  type: number
+                discharge_hours:
+                  type: number
+      responses:
+        "200":
+          description: Full financial analysis with NPV, IRR, ITC adders
+        "403":
+          description: Pro plan required
+  /bess/solar-plus:
+    post:
+      summary: Co-optimised solar + BESS — Pro plan
+      operationId: bessSolarPlus
+      description: >
+        Co-optimises solar and storage. Returns solar performance, BESS sizing,
+        combined financials, and savings streams.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - peak_demand_kw
+                - state
+                - flat_rate_usd_kwh
+              properties:
+                peak_demand_kw:
+                  type: number
+                state:
+                  type: string
+                flat_rate_usd_kwh:
+                  type: number
+                solar_capacity_kw:
+                  type: number
+                annual_kwh_consumption:
+                  type: number
+                chemistry_type:
+                  type: string
+      responses:
+        "200":
+          description: Combined solar and BESS analysis
+  /reference/states:
+    get:
+      summary: Demand charge and TOU data by state
+      operationId: getReferenceStates
+      responses:
+        "200":
+          description: State demand and TOU reference data
+  /reference/chemistry:
+    get:
+      summary: Battery chemistry database
+      operationId: getReferenceChemistry
+      responses:
+        "200":
+          description: Chemistry specs from ATB 2024 and PNNL-33283
+  /reference/methodology:
+    get:
+      summary: Full citation register
+      operationId: getReferenceMethodology
+      responses:
+        "200":
+          description: All data sources and citations
