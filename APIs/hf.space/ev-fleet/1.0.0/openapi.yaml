@@ -1,0 +1,132 @@
+openapi: "3.0.0"
+info:
+  title: EV Fleet Electrification & Solar Sizing API
+  version: "1.0.0"
+  description: |
+    Fleet electrification load modeling and solar co-sizing in a single API call.
+    Implements NREL EVI-Pro fleet load model, SAE J1772 charger specifications,
+    and IRA Section 45W commercial vehicle credit and Section 30C charging
+    equipment credit. Coverage: US all states, UK, Australia, India,
+    South Africa, Singapore.
+  contact:
+    name: Tinashe Nedi
+    email: support@solartruth.app
+    url: https://rapidapi.com/user/bethelnedi
+  x-apisguru-categories:
+    - energy
+  x-logo:
+    url: https://solartruth.app/logo.png
+externalDocs:
+  url: https://amfumu-ev-fleet-api.hf.space/docs
+servers:
+  - url: https://amfumu-ev-fleet-api.hf.space
+paths:
+  /fleet/quick:
+    post:
+      summary: Fleet load and demand charge estimate — Free plan
+      operationId: fleetQuick
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - fleet_size
+                - vehicle_type
+                - daily_miles_per_vehicle
+                - state
+                - depot_peak_demand_kw
+                - flat_rate_usd_kwh
+              properties:
+                fleet_size:
+                  type: integer
+                vehicle_type:
+                  type: string
+                daily_miles_per_vehicle:
+                  type: number
+                state:
+                  type: string
+                depot_peak_demand_kw:
+                  type: number
+                flat_rate_usd_kwh:
+                  type: number
+      responses:
+        "200":
+          description: Fleet load profile and demand charge estimate
+        "422":
+          description: Validation error
+  /fleet/full:
+    post:
+      summary: Complete fleet analysis with solar and incentives — Pro plan
+      operationId: fleetFull
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fleet_size:
+                  type: integer
+                vehicle_type:
+                  type: string
+                daily_miles_per_vehicle:
+                  type: number
+                state:
+                  type: string
+                depot_peak_demand_kw:
+                  type: number
+                flat_rate_usd_kwh:
+                  type: number
+                include_solar:
+                  type: boolean
+                country:
+                  type: string
+      responses:
+        "200":
+          description: Complete fleet electrification analysis
+        "403":
+          description: Pro plan required
+  /reference/vehicles:
+    get:
+      summary: Vehicle database with efficiency data
+      operationId: getReferenceVehicles
+      responses:
+        "200":
+          description: Vehicle efficiency and specification data
+  /reference/chargers:
+    get:
+      summary: EVSE charger specifications and costs
+      operationId: getReferenceChargers
+      responses:
+        "200":
+          description: SAE J1772 charger specifications
+  /reference/demand-rates:
+    get:
+      summary: Demand charge rates by state and country
+      operationId: getReferenceDemandRates
+      responses:
+        "200":
+          description: Demand charge rate data
+  /reference/climate-zones:
+    get:
+      summary: Solar climate zones and capacity factors
+      operationId: getReferenceClimateZones
+      responses:
+        "200":
+          description: Climate zone data
+  /reference/incentives:
+    get:
+      summary: Incentive programs by country
+      operationId: getReferenceIncentives
+      responses:
+        "200":
+          description: IRA and international incentive programs
+  /reference/methodology:
+    get:
+      summary: Full citation register
+      operationId: getReferenceMethodology
+      responses:
+        "200":
+          description: All data sources and citations
