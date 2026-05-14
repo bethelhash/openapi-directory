@@ -1,0 +1,223 @@
+openapi: "3.0.0"
+info:
+  title: Solar + EV Integration Sizing API
+  version: "1.0.0"
+  description: |
+    Solar and EV charging co-sizing in a single API call. 17 EV models with
+    EPA 2024 efficiency ratings. NEM 3.0 correctly modelled for California.
+    Pro plan adds TOU arbitrage, V2H assessment, battery recommendation,
+    and 25-year financial model. Supports two-EV household sizing.
+  contact:
+    name: Tinashe Nedi
+    email: support@solartruth.app
+    url: https://rapidapi.com/user/bethelnedi
+  x-apisguru-categories:
+    - energy
+  x-logo:
+    url: https://solartruth.app/logo.png
+externalDocs:
+  url: https://amfumu-solar-ev-api.hf.space/docs
+servers:
+  - url: https://amfumu-solar-ev-api.hf.space
+paths:
+  /health:
+    get:
+      summary: API status
+      operationId: getHealth
+      responses:
+        "200":
+          description: API status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+  /size/quick:
+    post:
+      summary: Quick solar and EV estimate — Free plan
+      operationId: sizeQuick
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - zip_code
+                - monthly_bill_usd
+                - ev_id
+                - annual_miles
+              properties:
+                zip_code:
+                  type: string
+                  example: "94102"
+                monthly_bill_usd:
+                  type: number
+                  example: 150
+                ev_id:
+                  type: string
+                  example: "tesla_model_3"
+                annual_miles:
+                  type: integer
+                  example: 12000
+                roof_orientation:
+                  type: string
+                  enum: [south, southwest, southeast, west, east, flat]
+                  default: south
+                shading:
+                  type: string
+                  enum: [no_obstructions, minimal_trees, moderate_shading, significant_trees]
+                  default: minimal_trees
+      responses:
+        "200":
+          description: Solar and EV sizing result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  solar_capacity_kw:
+                    type: number
+                  annual_solar_production_kwh:
+                    type: number
+                  ev_charging_kwh_annual:
+                    type: number
+                  estimated_savings_usd_annual:
+                    type: number
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /size/full:
+    post:
+      summary: Full solar and EV analysis — Pro plan
+      operationId: sizeFull
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - zip_code
+                - monthly_bill_usd
+                - ev_id
+                - annual_miles
+              properties:
+                zip_code:
+                  type: string
+                monthly_bill_usd:
+                  type: number
+                ev_id:
+                  type: string
+                annual_miles:
+                  type: integer
+                second_ev_id:
+                  type: string
+                second_ev_miles:
+                  type: integer
+                roof_orientation:
+                  type: string
+                shading:
+                  type: string
+                daytime_charging:
+                  type: boolean
+                  default: true
+                install_year:
+                  type: integer
+                  default: 2026
+                discount_rate:
+                  type: number
+                  default: 0.06
+      responses:
+        "200":
+          description: Full 25-year financial analysis
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  solar_capacity_kw:
+                    type: number
+                  npv_usd:
+                    type: number
+                  irr_pct:
+                    type: number
+                  battery_recommended:
+                    type: boolean
+                  v2h_compatible:
+                    type: boolean
+        "403":
+          description: Pro plan required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /reference/ev-models:
+    get:
+      summary: 17 EV models with EPA 2024 efficiency ratings
+      operationId: getReferenceEvmodels
+      responses:
+        "200":
+          description: EV model database
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+  /reference/tou-rates/{state}:
+    get:
+      summary: TOU rate profile by state
+      operationId: getReferenceTourates
+      parameters:
+        - name: state
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: TOU rate data
+          content:
+            application/json:
+              schema:
+                type: object
+  /reference/v2h-vehicles:
+    get:
+      summary: V2H capable vehicles
+      operationId: getReferenceV2hvehicles
+      responses:
+        "200":
+          description: V2H vehicle list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+  /reference/sizing-methodology:
+    get:
+      summary: Full citation register
+      operationId: getReferenceMethodology
+      responses:
+        "200":
+          description: All data sources and citations
+          content:
+            application/json:
+              schema:
+                type: object
+
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
