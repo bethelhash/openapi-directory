@@ -1,0 +1,254 @@
+openapi: "3.0.0"
+info:
+  title: Energy Audit Automation API
+  version: "1.0.0"
+  description: |
+    Commercial building energy screening in a single API call. Returns EUI
+    versus EPA national median, carbon emissions, dollar penalty exposure
+    under NYC Local Law 97, Boston BERDO 2.0, and Denver Energize Denver
+    for current and 2030 compliance periods. Includes solar offset potential
+    and ranked upgrade roadmap with ROI. Every figure cited to its regulatory
+    source. Covers 17 building types.
+  contact:
+    name: Tinashe Nedi
+    email: support@solartruth.app
+    url: https://rapidapi.com/user/bethelnedi
+  x-apisguru-categories:
+    - energy
+  x-logo:
+    url: https://solartruth.app/logo.png
+externalDocs:
+  url: https://amfumu-energy-audit-api.hf.space/docs
+servers:
+  - url: https://amfumu-energy-audit-api.hf.space
+paths:
+  /health:
+    get:
+      summary: API status
+      operationId: getHealth
+      responses:
+        "200":
+          description: API status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+  /pricing:
+    get:
+      summary: Plan details and rate limits
+      operationId: getPricing
+      responses:
+        "200":
+          description: Pricing plans
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  plans:
+                    type: array
+                    items:
+                      type: object
+  /audit/quick:
+    post:
+      summary: Quick energy screen from monthly bill — Free plan
+      operationId: auditQuick
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - property_type
+                - sq_ft
+                - monthly_energy_cost_usd
+              properties:
+                property_type:
+                  type: string
+                  example: "office"
+                sq_ft:
+                  type: number
+                  example: 50000
+                monthly_energy_cost_usd:
+                  type: number
+                  example: 8000
+                city:
+                  type: string
+                  enum: [nyc, boston, denver, all, none]
+                  default: nyc
+                climate_zone:
+                  type: string
+                  enum: [hot_arid, hot_humid, mixed, cold, marine]
+                  default: mixed
+      responses:
+        "200":
+          description: EUI screen result with benchmark and compliance status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  eui_kbtu_sqft:
+                    type: number
+                  epa_median_eui:
+                    type: number
+                  performance_vs_median_pct:
+                    type: number
+                  compliance_status:
+                    type: string
+                  penalty_exposure_usd:
+                    type: number
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /audit/full:
+    post:
+      summary: Full energy audit with multi-city BPS penalties — Pro plan
+      operationId: auditFull
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - property_type
+                - sq_ft
+                - annual_kwh
+              properties:
+                property_type:
+                  type: string
+                sq_ft:
+                  type: number
+                annual_kwh:
+                  type: number
+                annual_therms:
+                  type: number
+                  default: 0
+                city:
+                  type: string
+                  enum: [nyc, boston, denver, all]
+                  default: nyc
+                grid_region:
+                  type: string
+                  enum: [NYISO, ISONE, PJM, WECC_CO, SERC, MISO, ERCOT, national]
+                  default: NYISO
+                climate_zone:
+                  type: string
+                roof_pct:
+                  type: number
+                  default: 0.40
+                elec_rate:
+                  type: number
+                  default: 0.126
+                gas_rate:
+                  type: number
+                  default: 0.0127
+      responses:
+        "200":
+          description: Full audit with penalties, solar offset, and upgrade roadmap
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  eui_kbtu_sqft:
+                    type: number
+                  total_penalty_2024_2029_usd:
+                    type: number
+                  total_penalty_2030_2034_usd:
+                    type: number
+                  solar_offset_potential_kwh:
+                    type: number
+                  upgrade_roadmap:
+                    type: array
+                    items:
+                      type: object
+        "403":
+          description: Pro plan required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /reference/property-types:
+    get:
+      summary: All 17 supported building types
+      operationId: getReferencePropertytypes
+      responses:
+        "200":
+          description: Building type reference with EPA median EUI
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+  /reference/cities:
+    get:
+      summary: Supported BPS cities and laws
+      operationId: getReferenceCities
+      responses:
+        "200":
+          description: BPS jurisdiction details
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+  /reference/benchmarks:
+    get:
+      summary: EPA median EUI table by building type
+      operationId: getReferenceBenchmarks
+      responses:
+        "200":
+          description: EPA ENERGY STAR benchmark data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+  /reference/ll97-limits:
+    get:
+      summary: NYC LL97 emissions limits by building type
+      operationId: getReferencell97limits
+      responses:
+        "200":
+          description: LL97 emissions limits for both compliance periods
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+  /reference/carbon-factors:
+    get:
+      summary: EPA eGRID carbon emission factors
+      operationId: getReferenceCarbonfactors
+      responses:
+        "200":
+          description: eGRID 2022 emission factors by grid subregion
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
