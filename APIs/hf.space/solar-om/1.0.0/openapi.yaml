@@ -1,0 +1,295 @@
+openapi: "3.0.0"
+info:
+  title: Solar O&M Performance Monitoring API
+  version: "1.0.0"
+  description: |
+    Brand-agnostic solar performance monitoring. Works with Enphase, SolarEdge,
+    SMA, Fronius, or any data source. No hardware integration required.
+    Implements IEC 61724-1:2021 weather-corrected Performance Ratio, Jordan and
+    Kurtz 2013 age-adjusted degradation baseline, and root cause probability
+    scoring across 7 fault types. Every underperformance alert quantified in
+    dollars including IRR impact.
+  contact:
+    name: Tinashe Nedi
+    email: support@solartruth.app
+    url: https://rapidapi.com/user/bethelnedi
+  x-apisguru-categories:
+    - energy
+  x-logo:
+    url: https://solartruth.app/logo.png
+externalDocs:
+  url: https://amfumu-solar-om-api.hf.space/docs
+servers:
+  - url: https://amfumu-solar-om-api.hf.space
+paths:
+  /health:
+    get:
+      summary: API status
+      operationId: getHealth
+      responses:
+        "200":
+          description: API status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+  /pricing:
+    get:
+      summary: Plan details and rate limits
+      operationId: getPricing
+      responses:
+        "200":
+          description: Pricing plans
+          content:
+            application/json:
+              schema:
+                type: object
+  /monitor/quick:
+    post:
+      summary: Quick performance monitor — Free plan
+      operationId: monitorQuick
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - capacity_kw
+                - actual_kwh
+                - system_age_years
+              properties:
+                capacity_kw:
+                  type: number
+                  example: 100
+                actual_kwh:
+                  type: number
+                  example: 120000
+                system_age_years:
+                  type: number
+                  example: 5
+                climate_zone:
+                  type: string
+                  enum: [hot_arid, hot_humid, mixed, cold, marine, tropical]
+                  default: mixed
+                module_type:
+                  type: string
+                  enum: [monocrystalline_si, polycrystalline_si, cdte, hjt, bifacial]
+                  default: monocrystalline_si
+                reporting_period_months:
+                  type: number
+                  default: 12
+                electricity_rate_usd:
+                  type: number
+                  default: 0.126
+      responses:
+        "200":
+          description: Performance monitoring result with fault diagnosis
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  performance_ratio_pct:
+                    type: number
+                  expected_pr_pct:
+                    type: number
+                  underperformance_pct:
+                    type: number
+                  revenue_loss_usd:
+                    type: number
+                  top_fault_probability:
+                    type: object
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /monitor/full:
+    post:
+      summary: Full performance analysis — Pro plan
+      operationId: monitorFull
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - capacity_kw
+                - actual_kwh
+                - system_age_years
+              properties:
+                capacity_kw:
+                  type: number
+                actual_kwh:
+                  type: number
+                system_age_years:
+                  type: number
+                climate_zone:
+                  type: string
+                irradiance_kwh_m2:
+                  type: number
+                avg_ambient_temp_c:
+                  type: number
+                  default: 20.0
+                electricity_rate_usd:
+                  type: number
+                ppa_rate_usd:
+                  type: number
+                months_since_cleaning:
+                  type: number
+                time_of_day_pattern:
+                  type: string
+                  enum: [uniform, midday, morning, afternoon]
+                deviation_onset:
+                  type: string
+                  enum: [sudden, gradual, step_change]
+                reporting_period_months:
+                  type: number
+      responses:
+        "200":
+          description: Full analysis with all fault probabilities and IRR impact
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  performance_ratio_pct:
+                    type: number
+                  fault_probabilities:
+                    type: array
+                    items:
+                      type: object
+                  irr_impact_pct:
+                    type: number
+                  recommended_actions:
+                    type: array
+                    items:
+                      type: object
+        "403":
+          description: Pro plan required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /monitor/batch:
+    post:
+      summary: Batch monitor up to 50 systems — Pro plan
+      operationId: monitorBatch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - systems
+              properties:
+                systems:
+                  type: array
+                  maxItems: 50
+                  minItems: 1
+                  items:
+                    type: object
+                    required:
+                      - capacity_kw
+                      - actual_kwh
+                      - system_age_years
+                    properties:
+                      system_id:
+                        type: string
+                      capacity_kw:
+                        type: number
+                      actual_kwh:
+                        type: number
+                      system_age_years:
+                        type: number
+                      climate_zone:
+                        type: string
+                      electricity_rate_usd:
+                        type: number
+      responses:
+        "200":
+          description: Fleet monitoring results sorted by severity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+        "403":
+          description: Pro plan required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /reference/benchmarks:
+    get:
+      summary: PR benchmarks by climate zone
+      operationId: getReferenceBenchmarks
+      responses:
+        "200":
+          description: Performance ratio benchmark data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+  /reference/fault-signatures:
+    get:
+      summary: Fault type descriptions and detection signals
+      operationId: getReferenceFaultsignatures
+      responses:
+        "200":
+          description: Fault signature reference data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+  /reference/degradation-rates:
+    get:
+      summary: Jordan and Kurtz degradation rates by module type
+      operationId: getReferenceDegradationrates
+      responses:
+        "200":
+          description: Degradation rate reference data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+  /reference/maintenance-tasks:
+    get:
+      summary: Standard O&M task library with intervals
+      operationId: getReferenceMaintenancetasks
+      responses:
+        "200":
+          description: O&M maintenance task library
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
