@@ -1,0 +1,216 @@
+openapi: "3.0.0"
+info:
+  title: Solar Incentive Intelligence API
+  version: "1.0.0"
+  description: |
+    IRA 2022 bonus adder stack that pushes the effective ITC from 30% to 50%
+    for qualifying projects. Covers energy community bonus under IRA Section
+    48(a)(13), domestic content bonus under Section 48(a)(14), and low-income
+    community bonus under Section 48(e). Includes SREC market intelligence for
+    13 active US markets, 50-state incentive database with statutory citations,
+    and ITC step-down schedule through 2035. Every output cited to named IRS
+    Notices and Revenue Procedures.
+  contact:
+    name: Tinashe Nedi
+    email: support@solartruth.app
+    url: https://rapidapi.com/user/bethelnedi
+  x-apisguru-categories:
+    - energy
+  x-logo:
+    url: https://solartruth.app/logo.png
+externalDocs:
+  url: https://amfumu-solar-incentive-api.hf.space/docs
+servers:
+  - url: https://amfumu-solar-incentive-api.hf.space
+paths:
+  /health:
+    get:
+      summary: API status
+      operationId: getHealth
+      responses:
+        "200":
+          description: API status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+  /pricing:
+    get:
+      summary: Plan details and rate limits
+      operationId: getPricing
+      responses:
+        "200":
+          description: Pricing plans
+          content:
+            application/json:
+              schema:
+                type: object
+  /itc/quick:
+    post:
+      summary: ITC quick calculator — Free plan
+      operationId: itcQuick
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - state
+                - project_type
+                - install_year
+              properties:
+                state:
+                  type: string
+                  example: "CA"
+                project_type:
+                  type: string
+                  example: "commercial"
+                install_year:
+                  type: integer
+                  example: 2026
+      responses:
+        "200":
+          description: ITC calculation result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  base_itc_pct:
+                    type: number
+                  applicable_adders:
+                    type: array
+                    items:
+                      type: object
+                  effective_itc_pct:
+                    type: number
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /itc/full:
+    post:
+      summary: Full incentive analysis — Pro plan
+      operationId: itcFull
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - state
+                - project_type
+                - install_year
+              properties:
+                state:
+                  type: string
+                project_type:
+                  type: string
+                install_year:
+                  type: integer
+                energy_community:
+                  type: boolean
+                  default: false
+                domestic_content:
+                  type: boolean
+                  default: false
+                low_income_community:
+                  type: boolean
+                  default: false
+      responses:
+        "200":
+          description: Full incentive analysis
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  base_itc_pct:
+                    type: number
+                  adder_breakdown:
+                    type: array
+                    items:
+                      type: object
+                  effective_itc_pct:
+                    type: number
+                  state_incentives:
+                    type: array
+                    items:
+                      type: object
+                  srec_value_usd_mwh:
+                    type: number
+        "403":
+          description: Pro plan required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /reference/incentives:
+    get:
+      summary: 50-state incentive database
+      operationId: getReferenceIncentives
+      responses:
+        "200":
+          description: State incentive data with statutory citations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+  /reference/srec-markets:
+    get:
+      summary: SREC market prices for 13 active US markets
+      operationId: getReferenceSrecmarkets
+      responses:
+        "200":
+          description: Current SREC market data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+  /reference/itc-schedule:
+    get:
+      summary: ITC step-down schedule through 2035
+      operationId: getReferenceItcschedule
+      responses:
+        "200":
+          description: ITC schedule per IRA 2022
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+  /reference/energy-communities:
+    get:
+      summary: Energy community bonus adder data
+      operationId: getReferenceEnergycommunities
+      responses:
+        "200":
+          description: Energy community qualification data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
