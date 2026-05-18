@@ -1,0 +1,249 @@
+openapi: "3.0.0"
+info:
+  title: Residential Solar ROI API
+  version: "1.0.0"
+  description: |
+    Complete solar investment analysis for any US address in a single API call.
+    ZIP code and monthly electricity bill returns system sizing, utility
+    identification, NEM policy, full incentive stack, and 25-year financial
+    model with NPV, IRR, and LCOE. Uses PVWatts V8 and NASA POWER MERRA-2
+    22-year irradiance average. NEM 3.0 correctly modelled for California.
+    Battery advisory issued automatically for California installations.
+  contact:
+    name: Tinashe Nedi
+    email: support@solartruth.app
+    url: https://rapidapi.com/user/bethelnedi
+  x-apisguru-categories:
+    - energy
+  x-logo:
+    url: https://solartruth.app/logo.png
+externalDocs:
+  url: https://amfumu-solar-roi-api.hf.space/docs
+servers:
+  - url: https://amfumu-solar-roi-api.hf.space
+paths:
+  /health:
+    get:
+      summary: API status
+      operationId: getHealth
+      responses:
+        "200":
+          description: API status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+  /quick-estimate:
+    post:
+      summary: Quick solar estimate — Free plan
+      operationId: quickEstimate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - zip_code
+                - monthly_bill_usd
+              properties:
+                zip_code:
+                  type: string
+                  example: "90210"
+                monthly_bill_usd:
+                  type: number
+                  example: 150
+                roof_orientation:
+                  type: string
+                  enum: [south, southwest, southeast, west, east, flat]
+                  default: south
+                shading:
+                  type: string
+                  enum: [no_obstructions, minimal_trees, moderate_shading, significant_trees]
+                  default: minimal_trees
+      responses:
+        "200":
+          description: Solar estimate with system sizing, incentives, and savings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  system_size_kw:
+                    type: number
+                  annual_production_kwh:
+                    type: number
+                  estimated_cost_usd:
+                    type: number
+                  federal_itc_usd:
+                    type: number
+                  annual_savings_usd:
+                    type: number
+                  payback_years:
+                    type: number
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /calculate:
+    post:
+      summary: Full solar financial model — Pro plan
+      operationId: calculate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - zip_code
+              properties:
+                zip_code:
+                  type: string
+                latitude:
+                  type: number
+                  format: double
+                  minimum: -90
+                  maximum: 90
+                longitude:
+                  type: number
+                  format: double
+                  minimum: -180
+                  maximum: 180
+                state:
+                  type: string
+                system_kw_dc:
+                  type: number
+                monthly_bill_usd:
+                  type: number
+                roof_orientation:
+                  type: string
+                tilt_deg:
+                  type: number
+                module_type:
+                  type: string
+                  enum: [monocrystalline_si, polycrystalline_si, thin_film_cdte, heterojunction_hjt]
+                shading:
+                  type: string
+                install_year:
+                  type: integer
+                  default: 2026
+                discount_rate:
+                  type: number
+                  default: 0.06
+      responses:
+        "200":
+          description: Full 25-year financial model with NPV, IRR, LCOE
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  system_size_kw:
+                    type: number
+                  annual_production_kwh:
+                    type: number
+                  npv_usd:
+                    type: number
+                  irr_pct:
+                    type: number
+                  lcoe_usd_kwh:
+                    type: number
+                  battery_recommended:
+                    type: boolean
+        "403":
+          description: Pro plan required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /reference/utilities:
+    get:
+      summary: Supported utility database
+      operationId: getReferenceUtilities
+      responses:
+        "200":
+          description: Utility database with EIA identifiers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+  /reference/nem-policy/{state}:
+    get:
+      summary: NEM policy by state
+      operationId: getReferenceNempolicy
+      parameters:
+        - name: state
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Current NEM policy for the state
+          content:
+            application/json:
+              schema:
+                type: object
+  /reference/incentives/{state}:
+    get:
+      summary: All solar incentives by state
+      operationId: getReferenceIncentives
+      parameters:
+        - name: state
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: State incentive data with statutory citations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+  /reference/module-types:
+    get:
+      summary: Module technology guide
+      operationId: getReferenceModuletypes
+      responses:
+        "200":
+          description: Module type performance parameters
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+  /reference/states:
+    get:
+      summary: NEM policy summary all 50 states
+      operationId: getReferenceStates
+      responses:
+        "200":
+          description: NEM policy summary for all states
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
