@@ -1,0 +1,203 @@
+openapi: "3.0.0"
+info:
+  title: BIPV Energy Yield API
+  version: "2.0.0"
+  description: |
+    Research-grade building-integrated photovoltaic energy yield, financial
+    analysis, and CO2 savings. Implements the HDKR irradiance transposition
+    model (Reindl, Beckman and Duffie 1990), Sandia cell temperature model
+    (King et al. 2004), and IEC 61724-1:2021 Performance Ratio standard.
+    Pro plan uses NASA POWER MERRA-2 real irradiance data averaged over 22
+    years for any location on Earth. Outputs include annual yield, specific
+    yield, PR, LCOE, NPV, IRR, CO2 savings, and 25-year cashflow.
+  contact:
+    name: Tinashe Nedi
+    email: support@solartruth.app
+    url: https://rapidapi.com/user/bethelnedi
+  x-apisguru-categories:
+    - energy
+  x-logo:
+    url: https://solartruth.app/logo.png
+externalDocs:
+  url: https://amfumu-bipv-yield-api.hf.space/docs
+servers:
+  - url: https://amfumu-bipv-yield-api.hf.space
+paths:
+  /health:
+    get:
+      summary: API status
+      operationId: getHealth
+      responses:
+        "200":
+          description: API status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+  /quick-estimate:
+    get:
+      summary: Quick yield estimate — Free plan
+      operationId: quickEstimate
+      parameters:
+        - name: latitude
+          in: query
+          required: true
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+        - name: total_area_m2
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: climate_zone
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [arid, tropical, temperate, continental, polar]
+      responses:
+        "200":
+          description: Annual yield, peak power, and PR
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  annual_yield_kwh:
+                    type: number
+                  peak_power_kwp:
+                    type: number
+                  performance_ratio_pct:
+                    type: number
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /calculate:
+    post:
+      summary: Full BIPV yield and financial model — Pro plan
+      operationId: calculate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - location
+                - panel
+                - installation
+              properties:
+                location:
+                  type: object
+                  required:
+                    - latitude
+                    - longitude
+                  properties:
+                    latitude:
+                      type: number
+                      format: double
+                      minimum: -90
+                      maximum: 90
+                    longitude:
+                      type: number
+                      format: double
+                      minimum: -180
+                      maximum: 180
+                    altitude_m:
+                      type: number
+                    timezone_offset:
+                      type: integer
+                panel:
+                  type: object
+                  properties:
+                    panel_type:
+                      type: string
+                    rated_power_wp:
+                      type: number
+                    efficiency_stc:
+                      type: number
+                    temp_coeff_pmax:
+                      type: number
+                    noct:
+                      type: number
+                    area_m2:
+                      type: number
+                    is_semitransparent:
+                      type: boolean
+                installation:
+                  type: object
+                  properties:
+                    installation_type:
+                      type: string
+                    tilt_deg:
+                      type: number
+                    azimuth_deg:
+                      type: number
+                    total_area_m2:
+                      type: number
+                    num_modules:
+                      type: integer
+                    inverter_efficiency:
+                      type: number
+                    dc_cable_loss:
+                      type: number
+                    ac_cable_loss:
+                      type: number
+                financial:
+                  type: object
+                  properties:
+                    electricity_price_usd_kwh:
+                      type: number
+                    grid_region:
+                      type: string
+                    project_lifetime_years:
+                      type: integer
+                    discount_rate_pct:
+                      type: number
+      responses:
+        "200":
+          description: Full BIPV analysis with financials and CO2 savings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  annual_yield_kwh:
+                    type: number
+                  specific_yield_kwh_kwp:
+                    type: number
+                  performance_ratio_pct:
+                    type: number
+                  lcoe_usd_kwh:
+                    type: number
+                  npv_usd:
+                    type: number
+                  irr_pct:
+                    type: number
+                  co2_avoided_tonnes:
+                    type: number
+        "403":
+          description: Pro plan required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
