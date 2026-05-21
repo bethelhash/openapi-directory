@@ -1,0 +1,269 @@
+openapi: "3.0.0"
+info:
+  title: BIPV Structural Load API
+  version: "1.0.0"
+  description: |
+    Structural design loads for building-integrated photovoltaic facade and
+    roof systems. Send building geometry, panel specification, and installation
+    configuration — receive peak wind pressure per EN 1991-1-4:2005, ULS load
+    combinations per EN 1990:2002, bracket shear and pull-out forces, and SLS
+    deflection check. Also supports ASCE 7-22 Chapter 30 for US projects.
+    Every output value cited to its source standard. Developed by a structural
+    engineering researcher specialising in BIPV.
+  contact:
+    name: Tinashe Nedi
+    email: support@solartruth.app
+    url: https://rapidapi.com/user/bethelnedi
+  x-apisguru-categories:
+    - science
+  x-logo:
+    url: https://solartruth.app/logo.png
+externalDocs:
+  url: https://amfumu-bipv-structural-api.hf.space/docs
+servers:
+  - url: https://amfumu-bipv-structural-api.hf.space
+paths:
+  /health:
+    get:
+      summary: API status
+      operationId: getHealth
+      responses:
+        "200":
+          description: API status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+  /calculate:
+    post:
+      summary: Full structural load calculation
+      operationId: calculate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - site
+                - panel
+                - installation
+              properties:
+                site:
+                  type: object
+                  required:
+                    - basic_wind_speed_ms
+                    - terrain_category
+                    - altitude_m
+                    - building_height_m
+                    - building_width_m
+                    - building_depth_m
+                    - standard
+                  properties:
+                    basic_wind_speed_ms:
+                      type: number
+                      example: 26
+                    terrain_category:
+                      type: string
+                      enum: ["0", "I", "II", "III", "IV"]
+                      example: "II"
+                    altitude_m:
+                      type: number
+                      example: 100
+                    building_height_m:
+                      type: number
+                      example: 30
+                    building_width_m:
+                      type: number
+                      example: 40
+                    building_depth_m:
+                      type: number
+                      example: 20
+                    standard:
+                      type: string
+                      enum: [EN, ASCE]
+                      example: "EN"
+                panel:
+                  type: object
+                  required:
+                    - panel_type
+                    - panel_width_m
+                    - panel_height_m
+                    - panel_thickness_mm
+                  properties:
+                    panel_type:
+                      type: string
+                      enum: [glass_glass_standard, glass_glass_thin, glass_backsheet, glass_glass_semitrans, thin_film_glass, flexible_lightweight]
+                    panel_width_m:
+                      type: number
+                    panel_height_m:
+                      type: number
+                    panel_thickness_mm:
+                      type: number
+                installation:
+                  type: object
+                  required:
+                    - installation_type
+                    - facade_zone
+                    - tilt_deg
+                    - is_ventilated
+                    - air_gap_mm
+                    - fixing_points
+                    - bracket_spacing_m
+                    - surface_type
+                    - cpi
+                  properties:
+                    installation_type:
+                      type: string
+                    facade_zone:
+                      type: string
+                      enum: [A, B, C, D, E]
+                    tilt_deg:
+                      type: number
+                    is_ventilated:
+                      type: boolean
+                    air_gap_mm:
+                      type: number
+                    fixing_points:
+                      type: integer
+                    bracket_spacing_m:
+                      type: number
+                    surface_type:
+                      type: string
+                      enum: [wall, roof]
+                    cpi:
+                      type: number
+      responses:
+        "200":
+          description: Structural load results with all cited values
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  peak_wind_pressure_pa:
+                    type: number
+                  uls_load_combination_kn:
+                    type: number
+                  bracket_shear_force_kn:
+                    type: number
+                  bracket_pullout_force_kn:
+                    type: number
+                  sls_deflection_mm:
+                    type: number
+                  citations:
+                    type: array
+                    items:
+                      type: object
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /all-zones:
+    post:
+      summary: All EN facade zones A through E — Pro plan
+      operationId: allZones
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - site
+                - panel
+                - installation
+              properties:
+                site:
+                  type: object
+                panel:
+                  type: object
+                installation:
+                  type: object
+      responses:
+        "200":
+          description: All zone results with governing zone identified
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  zones:
+                    type: array
+                    items:
+                      type: object
+                  governing_zone:
+                    type: string
+        "403":
+          description: Pro plan required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /reference/terrain-categories:
+    get:
+      summary: EN 1991-1-4 terrain category table
+      operationId: getReferenceTerrainCategories
+      responses:
+        "200":
+          description: Terrain category reference data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+  /reference/panel-weights:
+    get:
+      summary: BIPV panel weight reference
+      operationId: getReferencePanelWeights
+      responses:
+        "200":
+          description: Panel type weights in kg per m2
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+  /reference/pressure-zones:
+    get:
+      summary: Facade pressure zones A through E with Cpe values
+      operationId: getReferencePressureZones
+      responses:
+        "200":
+          description: Pressure zone Cpe coefficients
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+  /reference/wind-speed-map:
+    get:
+      summary: Regional wind speed guidance
+      operationId: getReferenceWindSpeedMap
+      responses:
+        "200":
+          description: Regional wind speed reference data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
